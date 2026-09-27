@@ -39,7 +39,7 @@ Mixed fleet? Each printer can override the global backend choice — from the **
 
 ## The decision panel
 
-After a manual check, the plate-check dialog shows a **decision panel**: which backend produced the verdict, the verdict itself, its confidence, and the evidence — the pixel-difference percentage for OpenCV, or the model's stated reasoning for AI. When the AI backend is active, the calibration references and region-of-interest editor shown below it apply to the OpenCV backend only; the AI backend evaluates the full camera frame.
+After a manual check, the plate-check dialog shows a **decision panel**: which backend produced the verdict, the verdict itself, its confidence, and the evidence — the pixel-difference percentage for OpenCV, or the model's stated reasoning for AI. AI confidence is the model's estimate of confidence in its empty/not-empty verdict; it is not a pixel-difference score. When the AI backend is active, the calibration references and region-of-interest editor shown below it apply to the OpenCV backend only; the AI backend evaluates the full camera frame.
 
 ## Worked example — local Ollama (privacy-preserving)
 
@@ -47,7 +47,7 @@ After a manual check, the plate-check dialog shows a **decision panel**: which b
 - **Model name**: `qwen2.5vl:7b`
 - **API key**: leave empty
 
-This keeps every snapshot on your own network — nothing leaves your LAN. Pull the model first (`ollama pull qwen2.5vl:7b`) and give it a moment to load on first use; see "Cold start" below.
+This keeps every snapshot on your own network — nothing leaves your LAN. Pull the model first (`ollama pull qwen2.5vl:7b`) and allow time for it to load on first use; response times vary by hardware and model.
 
 ## Hosted OpenAI compatibility (untested)
 
@@ -55,7 +55,7 @@ The AI backend sends requests using the OpenAI `chat/completions` format, so a h
 
 For experimentation, the endpoint URL would be `https://api.openai.com/v1`, with a vision-capable model name and an API key accepted by that service. Treat this as an unverified configuration; hosted compatibility is theoretical until tested against a live provider. Other services that describe themselves as OpenAI-compatible may differ in accepted request options.
 
-**Test connection** probes request options because not every endpoint accepts the same shape. It starts with `max_tokens` and strict `json_schema` mode, then can fall back to `max_completion_tokens` and separately to plain `json_object` mode, for up to three requests. A successful probe confirms only that this endpoint accepted those options; it does not verify live provider behavior. Discovered fallback options are cached in memory for the running Bambuddy process. After a restart, run **Test connection** again if the endpoint requires a fallback shape; otherwise the default request shape is used.
+**Test connection** uses a synthetic frame to check the endpoint and model. It starts with `max_tokens` and strict `json_schema` output, then may probe alternatives if the endpoint rejects that shape: `max_completion_tokens` instead of `max_tokens`, and `json_object` instead of `json_schema` (up to three requests). A successful `json_object` fallback is usable but marked **degraded** in AI health status because its output is less constrained. The discovered request shape is cached only in memory for the running Bambuddy process. After a restart, run **Test connection** again if the endpoint needs a fallback shape; otherwise requests use the default shape. A successful probe only confirms the tested request was accepted; it does not verify live hosted-provider behavior.
 
 ## Privacy
 
@@ -72,7 +72,7 @@ Bambu's H2-series (H2/H2D/H2C), X2D, and P2S already run Bambu's own native fore
 
 ## Fail-open behavior
 
-The AI backend fails **open** on every error class — it assumes the plate is empty and lets the print proceed, exactly like the OpenCV backend's existing behavior on a capture failure. It never blocks a print because of a connectivity or configuration problem.
+The AI backend fails **open** on errors: a check that cannot produce a verdict is **unavailable**, not a finding that the plate is empty. At print start, an unavailable result allows printing to proceed, but the UI shows a distinct no-verdict state rather than a green empty verdict. The Settings status also exposes the latest per-printer health outcome. When a printer transitions to unavailable, Bambuddy sends a printer-error notification if configured, rate-limited per printer. Successful checks report the model's verdict; a successful check using `json_object` fallback is marked degraded. This differs from OpenCV, which reports a pixel-difference measurement.
 
 | Situation | What you'll see | What happens |
 |---|---|---|
@@ -80,15 +80,15 @@ The AI backend fails **open** on every error class — it assumes the plate is e
 | Request times out (e.g. cold local model) | "request timed out" | Fails open |
 | Can't reach the endpoint | "connection failed" | Fails open |
 | Endpoint returns an HTTP error (401, 500, …) | "AI backend returned an error" | Fails open |
-| Response isn't valid JSON | "invalid response from AI backend" (after one automatic retry) | Fails open |
-| Camera frame is corrupt/truncated | "camera frame could not be processed" | Fails open |
-| Database error reading settings | "AI backend unavailable" | Fails open |
+| Response isn't valid JSON or lacks a valid verdict | Manual check: one parse/schema retry, then unavailable. Print-start check: no parse retry. | Fails open; unavailable is distinct from an empty verdict |
+| Camera frame is corrupt/truncated | "camera frame could not be processed" | Fails open as unavailable |
+| Database error reading settings | "AI backend unavailable" | Fails open as unavailable |
 
 Messages are short and generic on purpose — they never include your configured server address, even in an error. Full detail goes to the server log.
 
-## Cold start / timeout
+## Request time limits
 
-The request timeout is fixed at 60 seconds. Loading a vision model into memory for the first time (or after idle eviction) can take 25–30 seconds on typical local hardware; once warm, a check normally completes in one to two seconds. If the *first* check after an idle period is slow, that's expected. If checks time out consistently even warm, use **Test connection** to isolate whether the problem is the endpoint, the model name, or something else.
+Manual checks and **Test connection** use a 60-second default per-request timeout. Test connection may issue up to two fallback probes; the first request can use that default, while subsequent discovery retries have a shorter per-request cap. Print-start checks use a separate 20-second aggregate budget for AI analysis, including frame processing and the request, and do not spend extra time on a parse/schema retry. The print-start AI analysis runs asynchronously after printer selection and the light-settle stage, so a slow backend does not hold up that path beyond its budget. Actual response time depends on the configured endpoint and model; no general latency is guaranteed.
 
 ## Troubleshooting
 
@@ -96,4 +96,4 @@ The request timeout is fixed at 60 seconds. Loading a vision model into memory f
 - **"connection failed"** — the URL is wrong, or the server isn't reachable from where Bambuddy runs (firewall, VLAN isolation).
 - **"AI backend returned an error" (401)** — API key missing or wrong for an endpoint that requires one.
 - **"AI backend returned an error" (404 or similar)** — the model name doesn't exist on that endpoint; check spelling and that the model is pulled/deployed.
-- **Test button hangs then times out** — likely a cold-start local model; try again once loaded.
+- **Test button times out** — check that the endpoint is reachable and the model is available, then retry; response time depends on the endpoint and model.
