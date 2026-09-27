@@ -594,15 +594,15 @@ Unlike queue auto-drying, ambient drying does not require any scheduled queue it
 
 ### Waiting Out a Humidity Spike { #sustained-humidity }
 
-Opening the AMS lid puts a gulp of room air on the sensor. The reading jumps immediately, and with ambient drying enabled that single reading was enough to start a cycle — so a spike the desiccant would have absorbed on its own in a few minutes bought a multi-hour dry.
+Opening the AMS lid can admit room air and cause a temporary humidity rise. Ambient drying uses the unit's effective humidity trigger threshold: the most restrictive applicable per-filament threshold when overrides are configured, or the global **AMS Humidity Threshold (Fair)** otherwise (see [Per-Filament Humidity Threshold](#per-filament-humidity-threshold)). With the sustained wait off, one reading above that threshold can start a cycle. Whether a rise is transient or signals a need for drying depends on the AMS and room conditions.
 
-**Require sustained humidity** (shown once ambient drying is enabled, in the same settings block) makes an ambient start wait until the unit's humidity has stayed above the Fair threshold **continuously** for a set number of minutes (5–240). Off by default — with it off, ambient drying starts instantly, exactly as before.
+**Require sustained humidity** (shown once ambient drying is enabled, in the same settings block) makes an ambient start wait until the unit's humidity has stayed above its effective trigger threshold **continuously** for a set number of minutes (5–240). Off by default — with it off, ambient drying starts instantly, exactly as before.
 
 Continuously means exactly that:
 
 - A single reading back at or below the threshold clears the wait. The clock starts over the next time the reading crosses the threshold.
 - A missing reading is treated as no information, not as a dip — a sensor that skips a beat does not reset the count.
-- A gap between observations longer than a few scheduler passes — at least two minutes, more if the scheduler polls slowly (Bambuddy restarted, the printer was disconnected, a print ran) — restarts the wait. Time nobody measured is not evidence the humidity stayed high. The restart is logged, so a wait that never matures can be explained from the log.
+- A gap longer than four scheduler polling intervals, with a two-minute minimum (for example, after Bambuddy restarts, the printer disconnects, or a print runs), restarts the wait. Time nobody measured is not evidence the humidity stayed high. The restart is logged, so a wait that never matures can be explained from the log.
 
 Only a printer with a **scheduled queue item pending** keeps the instant behavior — minutes burned ahead of a scheduled job is exactly what [queue auto-drying](#queue-auto-drying) exists to prevent, and the exemption follows the schedule whether the printer is idle or printing. An ambient start that merely happens during a print (permitted by [Continue drying while printing](#continue-drying-while-printing), which widens *when* drying may act but is not a trigger of its own) serves the same wait as any other ambient start.
 
@@ -611,7 +611,7 @@ Note that the exemption is per **printer**, not per AMS unit: any pending schedu
 The wait runs **alongside** the 30-minute [cooling-off period](#drying-threshold-floor) after a finished cycle rather than after it, so a re-dry waits for whichever is longer, not both in a row. And like the cooling-off period and the unproductive-cycle suspension, it only ever delays *starting* a cycle — a running cycle, or one you started by hand, is untouched.
 
 !!! tip "Picking a value"
-    The point is to outlast a lid-open transient, not to postpone real drying. 10–15 minutes is plenty for a spike from opening the lid; genuinely humid air keeps the reading up and the cycle still starts, just that many minutes later.
+    There is no single delay that fits every setup. A longer wait filters more short-lived rises but also delays a real drying cycle. Use the humidity readings from your own AMS and room to choose a duration that suits your setup.
 
 ### Using Both Modes Together
 
