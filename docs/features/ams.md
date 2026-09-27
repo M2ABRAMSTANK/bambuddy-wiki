@@ -611,7 +611,7 @@ Note that the exemption is per **printer**, not per AMS unit: any pending schedu
 The wait runs **alongside** the 30-minute [cooling-off period](#drying-threshold-floor) after a finished cycle rather than after it, so a re-dry waits for whichever is longer, not both in a row. And like the cooling-off period and the unproductive-cycle suspension, it only ever delays *starting* a cycle — a running cycle, or one you started by hand, is untouched.
 
 !!! tip "Picking a value"
-    There is no single delay that fits every setup. A longer wait filters more short-lived rises but also delays a real drying cycle. Use the humidity readings from your own AMS and room to choose a duration that suits your setup.
+    **15 minutes is a measured starting point, not a guarantee.** A single H2D case series informed this value, but openings that began near the effective threshold remained above it beyond 15 minutes. A baseline close to your trigger can reasonably lead to drying after the wait. Adjust for your AMS's threshold headroom, lid-opening pattern, and room/desiccant conditions; the measurement is not a universal recovery-time promise. See [the code PR's measurement notes](https://github.com/maziggy/bambuddy/pull/2895) for the case-series details and limitations.
 
 ### Using Both Modes Together
 
@@ -628,7 +628,7 @@ When both are enabled and a printer has scheduled prints, queue auto-drying take
 
 - AMS 2 Pro or AMS-HT unit (original AMS does not support drying)
 - Supported printer firmware (see [firmware requirements](#printer-firmware-requirements) above)
-- Humidity above the Fair threshold
+- Humidity above the effective trigger threshold (per-filament override when configured; otherwise the global Fair threshold)
 - No active power constraints on the AMS unit (see [power supply requirements](#power-supply-requirements))
 
 !!! tip "Print Farm Use Case"
