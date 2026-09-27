@@ -26,7 +26,7 @@ Settings → **Build Plate Check** tab:
 | Model name | The model to request, e.g. `qwen2.5vl:7b` for local Ollama |
 | API key (optional) | Leave empty for a local server that doesn't require one |
 
-Use the **Test connection** button to confirm the endpoint and model work before relying on it — it sends a synthetic gray test frame, not a real photo of your printer, so it's safe to use before anything else is set up.
+Use **Test connection** to check whether the configured endpoint and model return a valid verdict for a synthetic gray frame. It does not send a real printer photo, and a successful test does not guarantee real-camera results or prove hosted-provider compatibility.
 
 The same tab also shows:
 
@@ -64,7 +64,7 @@ For experimentation, the endpoint URL would be `https://api.openai.com/v1`, with
 ## Two things worth stating plainly
 
 1. **The per-printer "Build Plate Check" toggle still controls whether the check runs at all.** The backend choice (global, or per-printer override) selects *which* engine runs the check — it doesn't turn the check on or off. Enable the check for each printer you want covered, then choose the backend.
-2. **The AI backend needs no calibration.** No reference photos, no region-of-interest, no "not yet calibrated" state — it works the moment a valid base URL and model are set. Any calibration references and ROI you've set up are used by the OpenCV backend only.
+2. **The AI backend needs no calibration.** No reference photos, no region-of-interest, no "not yet calibrated" state — but the configured endpoint and model still need to be reachable and usable. Any calibration references and ROI you've set up are used by the OpenCV backend only.
 
 ## Which printers benefit
 
