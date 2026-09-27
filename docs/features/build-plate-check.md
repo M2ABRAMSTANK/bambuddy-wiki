@@ -49,16 +49,13 @@ After a manual check, the plate-check dialog shows a **decision panel**: which b
 
 This keeps every snapshot on your own network — nothing leaves your LAN. Pull the model first (`ollama pull qwen2.5vl:7b`) and give it a moment to load on first use; see "Cold start" below.
 
-## Worked example — hosted OpenAI
+## Hosted OpenAI compatibility (untested)
 
-- **AI backend URL**: `https://api.openai.com/v1`
-- **Model name**: `gpt-4o-mini`
-- **API key**: your OpenAI API key
+The AI backend sends requests using the OpenAI `chat/completions` format, so a hosted OpenAI endpoint may be configurable in principle. **Hosted OpenAI has not been tested against a live service**; no API key was available for verification. Automated tests use mocked HTTP responses to check request construction and response handling. Those tests do not establish that OpenAI, or another hosted provider, works end to end. The only live service exercised so far is local Ollama.
 
-Any OpenAI-compatible provider works the same way (OpenRouter, vLLM, etc.) — point the URL, model, and key at whichever service you use.
+For experimentation, the endpoint URL would be `https://api.openai.com/v1`, with a vision-capable model name and an API key accepted by that service. Treat this as an unverified configuration; hosted compatibility is theoretical until tested against a live provider. Other services that describe themselves as OpenAI-compatible may differ in accepted request options.
 
-!!! note "Hosted endpoints"
-    The hosted recipe follows the documented OpenAI `chat/completions` contract and is covered by tests, but the feature's author has only run the local-Ollama path against a live service. If you hit something unexpected on a hosted provider, please report it.
+**Test connection** probes request options because not every endpoint accepts the same shape. It starts with `max_tokens` and strict `json_schema` mode, then can fall back to `max_completion_tokens` and separately to plain `json_object` mode, for up to three requests. A successful probe confirms only that this endpoint accepted those options; it does not verify live provider behavior. Discovered fallback options are cached in memory for the running Bambuddy process. After a restart, run **Test connection** again if the endpoint requires a fallback shape; otherwise the default request shape is used.
 
 ## Privacy
 
