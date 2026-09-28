@@ -395,7 +395,7 @@ When the AMS encounters a power-related issue, the printer reports it as an HMS 
 4. Click **Start** (or **Schedule** for drying sessions scheduled for a future time).
 
 !!! tip "Filament Presets"
-    Temperature and duration defaults come from BambuStudio's official filament profiles. You can customize them in **Settings** > **AMS Display Thresholds** > **Drying Presets**. These presets are shared between manual drying, queue auto-drying, and ambient drying.
+    Temperature and duration defaults come from BambuStudio's official filament profiles. You can customize them in **Settings** > **Workflow** > **Queue Auto-Drying** > **Drying Presets**. These presets are shared between manual drying, queue auto-drying, and ambient drying.
 
 ### When a Scheduled Session Starts
 
@@ -408,7 +408,7 @@ Two of those states need you to act, and the session waits indefinitely until yo
 - **Connect AMS power adapter to enable drying** — codes 1 and 8
 - **Retract the filament at the AMS outlet to start drying** — code 3
 
-A session can also fail when it tries to start. The usual cause is firmware too old for remote drying, which Bambuddy cannot check if the printer was offline when you scheduled. The card shows the failed session in red with the reason. Clear it with the **×** button.
+A session can also fail. The usual cause is firmware too old for remote drying, which Bambuddy cannot check if the printer was offline when you scheduled. A session also fails when the printer accepts the command on an idle printer but the AMS never starts drying (see ["Drying not running"](#drying-not-running)). The card shows the failed session in red with the reason, in your language. Clear it with the **×** button.
 
 !!! warning "An interrupted session starts over"
     If something stops the dryer before the run finishes, such as a print claiming the AMS, the session goes back to pending and runs again for its full duration once the printer is free. Nothing limits how late that is, so a session interrupted overnight can start again the next afternoon.
@@ -431,9 +431,24 @@ When drying is active, a status bar appears between the AMS header and slot grid
 
     It then falls back to the loaded spools, which can name the filament but never the temperature. When every slot holds the same type, that is what is being dried, so the badge says so; on a mixed unit it shows the countdown alone rather than guessing. The temperature has no fallback at all — you choose it freely when starting a cycle, so the spools' own recommended drying temperature is no evidence of what the cycle is actually running. Expect to see just the filament and the countdown in that case.
 
-### "Drying not started" { #drying-not-started }
+### "Drying not running" { #drying-not-running }
 
-The printer sets an AMS unit's drying countdown the instant it accepts a drying command, before the cycle actually begins — and a live countdown only ticks once a minute. If it goes 150 seconds without a tick and the firmware isn't reporting an active Checking, Drying, or Cooling phase, Bambuddy shows a neutral grey **Drying not started** badge instead of the amber active one, with an explanation on hover; the **×** button still stops it. The usual cause is an accepted command that never got the power or printer time to run — for example, a unit's cycle queued behind two other AMS-HT units already drying, or the AMS waiting on power. Once the firmware reports one of those active phases, or the countdown starts moving, the badge switches back to the normal amber **Drying** state on its own — the firmware's reported phase always wins over the countdown heuristic. If a unit sits on this badge, wait for the AMS to have power and, if a print is running, for the print to finish; stopping and starting the cycle again once it does should let it actually begin.
+A printer sets an AMS unit's drying countdown as soon as it accepts a drying command, and a running cycle counts it down once a minute. If the countdown has not moved for 150 seconds and the AMS reports no Checking, Drying or Cooling phase, Bambuddy shows a grey **Drying not running** badge instead of the amber one. The countdown is hidden, because it is not counting, and hovering the badge explains why. The **×** button still stops it.
+
+There are two ways to get here, and they look the same:
+
+- **The cycle never started.** The printer took the command but the AMS never began heating. This was seen on an H2D during a print: two AMS-HT units were drying, and a third unit's timer sat at 720 minutes without heating.
+- **The cycle was paused partway**, for example by the power limit or the current print.
+
+As soon as the AMS reports an active phase, or the countdown moves again, the badge goes back to the amber **Drying** state on its own. A phase the AMS reports always wins over the 150-second rule. After Bambuddy restarts, the 150 seconds start again.
+
+If a unit stays on this badge, make sure the AMS has power and, if a print is running, wait for it to finish. If drying still doesn't start, stop it with **×** and start it again.
+
+A timer like this never reaches zero, so Bambuddy doesn't wait for it to end:
+
+- In [blocking mode](#blocking-vs-non-blocking-mode), a printer whose only drying timers are not running doesn't hold the queue.
+- A [scheduled session](#when-a-scheduled-session-starts) whose timer stops running goes back to pending if a print is running, and runs again once the printer is free. On an idle printer it fails with **The printer accepted the command, but the AMS did not start drying**. Either way the timer is left on the printer, since it may still start once power frees up.
+- The AMS high-temperature alarm is not held back for a unit that isn't actually heating.
 
 ### Stopping a Drying Session
 
@@ -518,7 +533,7 @@ Both consumers go through the same resolver, so they can never disagree on wheth
 
 1. Go to **Settings** > **AMS Display Thresholds**
 2. Set the **Fair (orange) ≤** humidity threshold — this is the trigger point for auto-drying
-3. Scroll to **Queue Auto-Drying**
+3. Go to **Settings** > **Workflow** and find the **Queue Auto-Drying** card
 4. Enable **Enable auto-drying**
 5. Optionally enable **Wait for drying to complete** (blocking mode)
 
